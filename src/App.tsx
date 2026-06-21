@@ -60,7 +60,9 @@ import {
   Layers,
   Lock,
   Percent,
-  HelpCircle
+  HelpCircle,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -186,6 +188,14 @@ export default function App() {
     location: "",
     imageUrl: ""
   });
+
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [showSecretAdManager, setShowSecretAdManager] = useState(false);
+  
+  const [newAdTitle, setNewAdTitle] = useState("");
+  const [newAdImage, setNewAdImage] = useState("");
+  const [newAdLink, setNewAdLink] = useState("");
 
   const [newClient, setNewClient] = useState({
     type: "PF" as "PF" | "PJ",
@@ -340,6 +350,31 @@ export default function App() {
       cost: "0", salePrice: "0", stock: "0", stockMin: "0", stockMax: "0",
       location: "", imageUrl: ""
     });
+  };
+
+  const handleUpdateProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const costNum = parseFloat(editingProduct.cost as any) || 0;
+    const saleNum = parseFloat(editingProduct.salePrice as any) || 0;
+    const profit = costNum > 0 ? Math.round(((saleNum - costNum) / costNum) * 100) : 100;
+
+    const updated: Product = {
+      ...editingProduct,
+      cost: costNum,
+      salePrice: saleNum,
+      profitMargin: profit,
+      stock: parseInt(editingProduct.stock as any) || 0,
+      stockMin: parseInt(editingProduct.stockMin as any) || 0,
+      stockMax: parseInt(editingProduct.stockMax as any) || 100,
+      supplierName: suppliers.find(s => s.id === editingProduct.supplierId)?.companyName || editingProduct.supplierName
+    };
+
+    setProducts(products.map(p => p.id === updated.id ? updated : p));
+    setShowEditProductModal(false);
+    setEditingProduct(null);
+    alert("Produto atualizado com sucesso!");
   };
 
   const handleAddNewClient = (e: React.FormEvent) => {
@@ -934,25 +969,30 @@ export default function App() {
 
             {/* ADVERTISING BANNER BLOCK */}
             {!isSidebarCollapsed && activePromoBanner && (
-              <div className="p-3 mx-3 mb-4 bg-slate-950 border border-indigo-800/50 rounded-xl flex flex-col justify-between text-xs space-y-2">
+              <div 
+                onClick={() => setShowSecretAdManager(true)}
+                className="p-3 mx-3 mb-4 bg-slate-950 border border-indigo-800/40 hover:border-indigo-500 rounded-xl flex flex-col justify-between text-xs space-y-2 cursor-pointer transition-all duration-200 hover:shadow-lg group"
+                title="Dono da Loja: Clique para gerenciar seus anúncios neste painel oculto!"
+              >
                 <div className="flex justify-between items-center text-[9px] text-zinc-500">
                   <span className="bg-amber-400/20 text-amber-400 px-1 py-0.5 rounded font-black">Patrocinado</span>
-                  <span>Promo Central</span>
+                  <span className="text-zinc-500 group-hover:text-amber-400 text-[8px] font-mono">⚙ Gerenciar</span>
                 </div>
                 <img 
                   src={activePromoBanner.imageUrl} 
                   alt={activePromoBanner.title} 
-                  className="rounded h-16 w-full object-cover filter brightness-75"
+                  className="rounded h-16 w-full object-cover filter brightness-75 group-hover:brightness-100 transition-all duration-200"
                 />
-                <div className="font-semibold text-[10px] text-indigo-300 leading-snug">{activePromoBanner.title}</div>
-                <a 
-                  href={activePromoBanner.link} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="w-full text-center bg-indigo-600 hover:bg-indigo-500 transition-colors py-1 text-[9px] text-white font-bold rounded"
+                <div className="font-semibold text-[10px] text-zinc-300 group-hover:text-indigo-400 transition-colors leading-snug">{activePromoBanner.title}</div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSecretAdManager(true);
+                  }}
+                  className="w-full text-center bg-indigo-600 hover:bg-indigo-500 transition-colors py-1 text-[9px] text-white font-bold rounded cursor-pointer border-none"
                 >
-                  Ver Ofertas
-                </a>
+                  Configurar Anúncios 🔑
+                </button>
               </div>
             )}
           </aside>
@@ -1338,7 +1378,7 @@ export default function App() {
                                     setProducts(products.map(prod => prod.id === p.id ? { ...prod, stock: prod.stock + addStock } : prod));
                                   }
                                 }}
-                                className="py-1 px-2 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-emerald-400"
+                                className="py-1 px-2 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-emerald-400 cursor-pointer"
                               >
                                 + Entrada
                               </button>
@@ -1349,9 +1389,33 @@ export default function App() {
                                     setProducts(products.map(prod => prod.id === p.id ? { ...prod, stock: Math.max(0, prod.stock - subStock) } : prod));
                                   }
                                 }}
-                                className="py-1 px-2 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-red-400"
+                                className="py-1 px-2 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-red-400 cursor-pointer"
                               >
                                 - Saída
+                              </button>
+                            </div>
+
+                            {/* EDIT & DELETE ACTIONS */}
+                            <div className="grid grid-cols-2 gap-1.5 mt-1.5 border-t border-slate-800/30 pt-1.5">
+                              <button 
+                                onClick={() => {
+                                  setEditingProduct({ ...p });
+                                  setShowEditProductModal(true);
+                                }}
+                                className="py-1 px-2 bg-indigo-950/20 hover:bg-indigo-900/50 border border-indigo-900/30 hover:border-indigo-800 text-indigo-300 rounded text-[9px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Edit className="w-3 h-3" /> Editar
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if (confirm(`Tem certeza de que deseja apagar permanentemente o produto "${p.description}"?`)) {
+                                    setProducts(products.filter(prod => prod.id !== p.id));
+                                    alert("Produto excluído com sucesso do estoque!");
+                                  }
+                                }}
+                                className="py-1 px-2 bg-rose-950/20 hover:bg-rose-900/50 border border-rose-900/30 hover:border-rose-800 text-rose-300 rounded text-[9px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" /> Excluir
                               </button>
                             </div>
                           </div>
@@ -1370,6 +1434,7 @@ export default function App() {
                     clients={clients}
                     onCompleteSale={handleCompleteSale}
                     propagandaBanner={activePromoBanner}
+                    onAdClick={() => setShowSecretAdManager(true)}
                   />
                 </div>
               )}
@@ -2483,6 +2548,548 @@ Sua avaliação nos ajuda a selecionar as melhores marcas. Responda este WhatsAp
                 Gravar e Inserir no Estoque central
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 1.5. EDIT PRODUCT MODAL */}
+      {showEditProductModal && editingProduct && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Editar Detalhes do Produto</h3>
+              <button 
+                onClick={() => {
+                  setShowEditProductModal(false);
+                  setEditingProduct(null);
+                }} 
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProduct} className="space-y-4 text-xs text-slate-300">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Código Interno</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Ex: FER-201" 
+                    value={editingProduct.code} 
+                    onChange={e => setEditingProduct({ ...editingProduct, code: e.target.value })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Código de Barras EAN</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Código de Barras" 
+                    value={editingProduct.barcode} 
+                    onChange={e => setEditingProduct({ ...editingProduct, barcode: e.target.value })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Descrição Comercial do Item *</label>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="Ex: Chave Estrela 14x15 Gedore" 
+                  value={editingProduct.description} 
+                  onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })} 
+                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Categoria Ferragista *</label>
+                  <select 
+                    value={editingProduct.category} 
+                    onChange={e => setEditingProduct({ ...editingProduct, category: e.target.value as any })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800 animate-none"
+                  >
+                    {categoriesList.filter(c => c !== "Todos").map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Subcategoria</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Chaves Fixas" 
+                    value={editingProduct.subCategory || ""} 
+                    onChange={e => setEditingProduct({ ...editingProduct, subCategory: e.target.value })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Marca / Fabricante</label>
+                  <input 
+                    type="text" 
+                    placeholder="Gedore, Tramontina..." 
+                    value={editingProduct.brand} 
+                    onChange={e => setEditingProduct({ ...editingProduct, brand: e.target.value })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Custo Fornecedor R$ *</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    required 
+                    value={editingProduct.cost} 
+                    onChange={e => setEditingProduct({ ...editingProduct, cost: parseFloat(e.target.value) || 0 })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Preço de Venda R$ *</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    required 
+                    value={editingProduct.salePrice} 
+                    onChange={e => setEditingProduct({ ...editingProduct, salePrice: parseFloat(e.target.value) || 0 })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Unidade Venda *</label>
+                  <select 
+                    value={editingProduct.unit} 
+                    onChange={e => setEditingProduct({ ...editingProduct, unit: e.target.value as any })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800"
+                  >
+                    <option value="UN">UN - Unidade</option>
+                    <option value="KG">KG - Quilograma</option>
+                    <option value="M">M - Metro Linear</option>
+                    <option value="PCT">PCT - Pacote</option>
+                    <option value="CX">CX - Caixa fechada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Estoque</label>
+                  <input 
+                    type="number" 
+                    value={editingProduct.stock} 
+                    onChange={e => setEditingProduct({ ...editingProduct, stock: parseInt(e.target.value) || 0 })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nível Mínimo</label>
+                  <input 
+                    type="number" 
+                    value={editingProduct.stockMin} 
+                    onChange={e => setEditingProduct({ ...editingProduct, stockMin: parseInt(e.target.value) || 0 })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nível Máximo</label>
+                  <input 
+                    type="number" 
+                    value={editingProduct.stockMax} 
+                    onChange={e => setEditingProduct({ ...editingProduct, stockMax: parseInt(e.target.value) || 0 })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Localização no Galpão</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Corredor A, Prateleira 4" 
+                    value={editingProduct.location} 
+                    onChange={e => setEditingProduct({ ...editingProduct, location: e.target.value })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fornecedor Vinculado</label>
+                  <select 
+                    value={editingProduct.supplierId} 
+                    onChange={e => setEditingProduct({ ...editingProduct, supplierId: e.target.value })} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 bg-slate-950 border-slate-800"
+                  >
+                    {suppliers.map(s => (
+                      <option key={s.id} value={s.id}>{s.companyName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button type="submit" className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs cursor-pointer transition-colors border-none">
+                Gravar Alterações e Atualizar Estoque central
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 1.6. SECRET AD CONTROL PANEL MODAL (PÁGINA OCULTA) */}
+      {showSecretAdManager && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-amber-500/30 rounded-2xl p-6 max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl space-y-5 text-xs text-slate-300 relative">
+            
+            {/* Hologram or secret watermark tag */}
+            <div className="absolute top-4 right-12 bg-amber-400/10 border border-amber-400/40 text-amber-400 font-mono text-[9px] px-2 py-0.5 rounded uppercase font-black tracking-widest animate-pulse">
+              Painel Secreto Desbloqueado
+            </div>
+
+            {/* Close button */}
+            <button 
+              onClick={() => {
+                setShowSecretAdManager(false);
+              }} 
+              className="absolute top-4 right-4 p-1 hover:bg-slate-800 rounded text-slate-400 cursor-pointer transition-colors"
+              title="Fechar Painel Secreto"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Title block */}
+            <div className="border-b border-indigo-950 pb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="p-1.5 bg-amber-500/20 text-amber-400 rounded">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-black text-white uppercase tracking-wider font-display">
+                  SaaS Hub Oculto — Gestor Dinâmico de Campanhas & Anúncios
+                </h3>
+              </div>
+              <p className="text-slate-400 text-[11px] leading-relaxed mt-1">
+                Você descobriu o painel secreto de publicidade clicando no banner! Use este workspace exclusivo para alternar campanhas ou <strong>criar dois ou mais novos anúncios personalizados</strong> para veicular no rodapé do PDV e na barra lateral.
+              </p>
+            </div>
+
+            {/* Statistics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60">
+                <span className="text-[10px] text-zinc-500 font-bold uppercase block">Banners Disponíveis</span>
+                <span className="text-xl font-black text-white font-mono">{banners.length}</span>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60">
+                <span className="text-[10px] text-zinc-500 font-bold uppercase block">Banners Ativos</span>
+                <span className="text-xl font-black text-emerald-400 font-mono">
+                  {banners.filter(b => b.active).length}
+                </span>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60">
+                <span className="text-[10px] text-zinc-500 font-bold uppercase block">Cliques Totais</span>
+                <span className="text-xl font-black text-sky-400 font-mono">
+                  {banners.reduce((sum, b) => sum + (b.clicks || 0), 24).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick 1-Click Banner Presets SECTION */}
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-indigo-950/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[11px] font-black text-indigo-300 uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Presets de Anúncios Rápidos (Instalação 1clique)
+                </h4>
+                <span className="text-[9px] text-zinc-500 font-mono">Prontos para veiculação</span>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* PRESET 1 */}
+                <div className="bg-slate-900 border border-slate-800 hover:border-amber-500/50 p-2.5 rounded-lg flex gap-3 items-center group transition-all duration-200">
+                  <img 
+                    src="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=200" 
+                    alt="Preset Bosch" 
+                    className="w-12 h-12 rounded object-cover" 
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-200 text-[11px] truncate">Mega Feirão das Ferramentas Bosch</p>
+                    <p className="text-[9px] text-zinc-400 mt-0.5 leading-tight">Preço diferenciado e 10x sem juros</p>
+                    <button 
+                      onClick={() => {
+                        const isDuplicate = banners.some(b => b.title.includes("Mega Feirão das Ferramentas Bosch"));
+                        if (isDuplicate) {
+                          alert("Este anúncio recomendado da Bosch já está instalado!");
+                          return;
+                        }
+                        const newAd: PropagandaBanner = {
+                          id: `preset-bosch-${Date.now()}`,
+                          title: "⚙️ Mega Feirão das Ferramentas Bosch — Parcelas em 10x Sem Juros!",
+                          imageUrl: "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=400",
+                          link: "https://www.bosch-professional.com",
+                          displayLocation: "lateral",
+                          active: false,
+                          impressions: 1,
+                          clicks: 0
+                        };
+                        setBanners([...banners, newAd]);
+                        alert("Anúncio Bosch Tools instalado! Habilite-o na lista abaixo para veiculá-lo.");
+                      }}
+                      className="mt-1.5 px-2 py-0.5 bg-indigo-950 hover:bg-indigo-900 text-[9px] font-black text-indigo-300 hover:text-white rounded border border-indigo-800/60 cursor-pointer block transition-colors"
+                    >
+                      Instalar este Anúncio +1
+                    </button>
+                  </div>
+                </div>
+
+                {/* PRESET 2 */}
+                <div className="bg-slate-900 border border-slate-800 hover:border-amber-500/50 p-2.5 rounded-lg flex gap-3 items-center group transition-all duration-200">
+                  <img 
+                    src="https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&q=80&w=200" 
+                    alt="Preset Suvinil" 
+                    className="w-12 h-12 rounded object-cover" 
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-200 text-[11px] truncate">Festival Tintas Suvinil Premium</p>
+                    <p className="text-[9px] text-zinc-400 mt-0.5 leading-tight">Suas paredes premium com 35% OFF</p>
+                    <button 
+                      onClick={() => {
+                        const isDuplicate = banners.some(b => b.title.includes("Festival Tintas Suvinil"));
+                        if (isDuplicate) {
+                          alert("Este anúncio recomendado da Suvinil já está instalado!");
+                          return;
+                        }
+                        const newAd: PropagandaBanner = {
+                          id: `preset-suvinil-${Date.now()}`,
+                          title: "🎨 Grande Festival de Tintas Suvinil Premium — Renove sua casa com até 35% de Desconto!",
+                          imageUrl: "https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&q=80&w=400",
+                          link: "https://www.suvinil.com.br",
+                          displayLocation: "lateral",
+                          active: false,
+                          impressions: 1,
+                          clicks: 0
+                        };
+                        setBanners([...banners, newAd]);
+                        alert("Anúncio Suvinil Premium instalado! Habilite-o na lista abaixo para veiculá-lo.");
+                      }}
+                      className="mt-1.5 px-2 py-0.5 bg-indigo-950 hover:bg-indigo-900 text-[9px] font-black text-indigo-300 hover:text-white rounded border border-indigo-800/60 cursor-pointer block transition-colors"
+                    >
+                      Instalar este Anúncio +1
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Manual Ad Creator Form */}
+            <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 className="text-[11px] font-black text-white uppercase tracking-wider flex items-center gap-1">
+                <Plus className="w-3.5 h-3.5 text-emerald-400" /> Criador Manual de Novos Anúncios
+              </h4>
+              
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newAdTitle.trim()) {
+                    alert("Por favor escreva um título persuasivo para o banner.");
+                    return;
+                  }
+                  
+                  const newAd: PropagandaBanner = {
+                    id: `custom-created-${Date.now()}`,
+                    title: newAdTitle,
+                    imageUrl: newAdImage.trim() || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=400",
+                    link: newAdLink.trim() || "https://www.nortonabrasivos.com.br",
+                    displayLocation: "lateral",
+                    active: false,
+                    impressions: 1,
+                    clicks: 0
+                  };
+
+                  setBanners([...banners, newAd]);
+                  setNewAdTitle("");
+                  setNewAdImage("");
+                  setNewAdLink("");
+                  alert("Novo anúncio cadastrado com sucesso e incluído no estoque de banners do sistema!");
+                }}
+                className="space-y-3"
+              >
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                    Título do Anúncio (Frase impactante comercial) *
+                  </label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="Ex: Oferta Relâmpago: Discos Norton Ultra Finos Compre 5 Leve 6!" 
+                    value={newAdTitle}
+                    onChange={e => setNewAdTitle(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Link / URL Completo da Imagem
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Deixe em branco para usar automotiva padrão ou digite uma URL" 
+                      value={newAdImage}
+                      onChange={e => setNewAdImage(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" 
+                    />
+                    
+                    {/* Fast Image presets */}
+                    <div className="flex gap-1.5 mt-1">
+                      <button 
+                        type="button" 
+                        onClick={() => setNewAdImage("https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=400")}
+                        className="bg-slate-900 border border-slate-850 hover:bg-slate-850 rounded px-1.5 py-0.5 text-[8px] text-zinc-400 hover:text-white cursor-pointer"
+                      >
+                        📸 Equipamentos
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setNewAdImage("https://images.unsplash.com/photo-1541535881962-e66056557b22?auto=format&fit=crop&q=80&w=400")}
+                        className="bg-slate-900 border border-slate-850 hover:bg-slate-850 rounded px-1.5 py-0.5 text-[8px] text-zinc-400 hover:text-white cursor-pointer"
+                      >
+                        📸 Tintas
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setNewAdImage("https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=400")}
+                        className="bg-slate-900 border border-slate-850 hover:bg-slate-850 rounded px-1.5 py-0.5 text-[8px] text-zinc-400 hover:text-white cursor-pointer"
+                      >
+                        📸 Construção
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Link de Ação Redirecionamento (URL)
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: https://seusite.com.br/promocao" 
+                      value={newAdLink}
+                      onChange={e => setNewAdLink(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" 
+                    />
+                    <span className="text-[8px] text-zinc-500">Opcional. Se o operador do PDV clicar, abrirá esse link.</span>
+                  </div>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full py-2.5 bg-emerald-505 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs cursor-pointer transition-colors shadow-md border-none"
+                >
+                  Salvar e Adicionar à Lista de Campanhas ✔
+                </button>
+              </form>
+            </div>
+
+            {/* List and Toggle existing database of banners */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center border-b border-slate-850 pb-2">
+                <h4 className="text-[11px] font-black text-indigo-350 text-indigo-300 uppercase tracking-widest">
+                  Lista de Campanhas Cadastradas no Sistema (Escolha qual Ativar)
+                </h4>
+                <span className="text-[9px] text-zinc-500">Nota: Marque como ativa para rodar no PDV/Sidebar</span>
+              </div>
+
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                {banners.map((b) => {
+                  return (
+                    <div 
+                      key={b.id} 
+                      className={`p-3 rounded-xl bg-slate-950 border transition-all duration-200 flex justify-between items-center ${
+                        b.active ? "border-amber-500/50 bg-slate-950/90 shadow-xs" : "border-slate-850 hover:border-slate-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={b.imageUrl} 
+                          alt={b.title} 
+                          className="w-12 h-10 object-cover rounded border border-slate-800" 
+                        />
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-200 text-[11px] truncate max-w-[320px]">
+                            {b.title}
+                          </p>
+                          <div className="flex gap-2.5 text-[9px] text-zinc-500 mt-0.5">
+                            <span>Exibição recomendada: {b.displayLocation}</span>
+                            <span>•</span>
+                            <span className="text-zinc-650">Impressões: {b.impressions}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {/* Toggle switch */}
+                        <div className="flex flex-col items-end">
+                          <span className={`text-[9px] font-extrabold pb-0.5 uppercase ${b.active ? "text-amber-400" : "text-slate-500"}`}>
+                            {b.active ? "Veiculando" : "Pausado"}
+                          </span>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              // If enabling this, let's toggle active for this one and toggle the rest to active: false (or keep multiple, but typically 1 at a time or simple toggle)
+                              // Let's do a simple toggle:
+                              setBanners(banners.map(curr => {
+                                if (curr.id === b.id) {
+                                  return { ...curr, active: !curr.active };
+                                }
+                                // If we want only 1 active at a time to keep it clean, or let multiple be active:
+                                return curr;
+                              }));
+                            }}
+                            className={`px-2 py-0.5 text-[9px] rounded font-black cursor-pointer transition-all border ${
+                              b.active ? "bg-amber-400 text-slate-950 border-amber-500" : "bg-slate-900 text-slate-400 border-slate-800 hover:text-white"
+                            }`}
+                          >
+                            {b.active ? "Pausar" : "Ativar"}
+                          </button>
+                        </div>
+
+                        {/* Delete button (except for original) */}
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Remover permanentemente a campanha "${b.title}"?`)) {
+                              setBanners(banners.filter(curr => curr.id !== b.id));
+                            }
+                          }}
+                          className="p-1.5 hover:bg-rose-950/30 hover:text-rose-400 text-slate-500 rounded transition-colors cursor-pointer"
+                          title="Excluir Campanha"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal actions footer */}
+            <div className="pt-4 border-t border-indigo-950 flex justify-end">
+              <button 
+                type="button" 
+                onClick={() => setShowSecretAdManager(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs cursor-pointer transition-colors"
+              >
+                Retornar ao Frente de Caixa (Fechar)
+              </button>
+            </div>
+
           </div>
         </div>
       )}

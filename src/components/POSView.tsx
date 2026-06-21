@@ -9,9 +9,10 @@ interface POSProps {
   clients: Client[];
   onCompleteSale: (sale: Sale, updatedProducts: Product[]) => void;
   propagandaBanner?: { title: string; imageUrl: string; link: string };
+  onAdClick?: () => void;
 }
 
-export default function POSView({ products, employees, clients, onCompleteSale, propagandaBanner }: POSProps) {
+export default function POSView({ products, employees, clients, onCompleteSale, propagandaBanner, onAdClick }: POSProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [cart, setCart] = useState<Array<{ product: Product; quantity: number }>>([]);
   const [discount, setDiscount] = useState<number>(0);
@@ -204,11 +205,15 @@ export default function POSView({ products, employees, clients, onCompleteSale, 
 
         {/* Dynamic Ad Campaign */}
         {propagandaBanner && (
-          <div className="bg-amber-50 dark:bg-zinc-950 border border-amber-200 dark:border-amber-950 rounded-xl p-3 flex items-center gap-3">
-            <div className="bg-amber-500 text-white rounded px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider">Anúncio</div>
-            <a href={propagandaBanner.link} target="_blank" rel="noreferrer" className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline flex-1 truncate">
-              {propagandaBanner.title} — clique para conferir ofertas exclusivas!
-            </a>
+          <div 
+            onClick={() => onAdClick?.()}
+            className="bg-amber-50 dark:bg-zinc-950 hover:bg-amber-100/50 dark:hover:bg-indigo-950/25 border border-amber-200 dark:border-amber-950 hover:border-amber-400 dark:hover:border-indigo-800/60 rounded-xl p-3 flex items-center gap-3 cursor-pointer transition-all duration-200 hover:shadow-md group"
+          >
+            <div className="bg-amber-500 group-hover:bg-indigo-505 bg-amber-500 text-white rounded px-1.5 py-0.5 text-[9px] uppercase font-black tracking-wider shadow-xs">Anúncio CRM</div>
+            <button className="text-left text-xs font-semibold text-amber-800 dark:text-amber-300 group-hover:text-indigo-405 group-hover:text-indigo-400 flex-1 truncate bg-transparent border-none p-0 outline-hidden">
+              {propagandaBanner.title} — clique para abrir o painel oculto de campanhas!
+            </button>
+            <span className="text-[10px] text-zinc-500 font-mono group-hover:text-indigo-400 select-none">🔑 Config</span>
           </div>
         )}
       </div>
