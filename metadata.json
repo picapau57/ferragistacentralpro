@@ -1,0 +1,6 @@
+{
+  "name": "ERP Ferragista SaaS",
+  "description": "Sistema completo de gestão, PDV, controle de estoque para ferragens, ferramentas e materiais, módulo financeiro, faturamento, controle de assinaturas e assistente inteligente de IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
